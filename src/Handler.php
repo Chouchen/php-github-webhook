@@ -3,66 +3,95 @@ namespace GitHubWebhook;
 
 class Handler
 {
-    private $secret;
-    private $remote;
-    private $gitDir;
-    private $data;
-    private $event;
-    private $delivery;
-    private $gitOutput;
+    /**
+     * @var string secret passphrase
+     */
+    private $_secret;
+    /**
+     * @var string[] response data
+     */
+    private $_data;
+    /**
+     * @var string event type that triggered the web hook
+     */
+    private $_event;
+    /**
+     * @var string Unique ID for this delivery
+     */
+    private $_delivery;
+    /**
+     * @var CallbackHandler class that handle callback (obviously)
+     */
+    private $_callbacks;
 
-    public function __construct($secret, $gitDir, $remote = null)
+    /**
+     * Constructor
+     *
+     * @param $secret
+     */
+    public function __construct($secret)
     {
-        $this->secret = $secret;
-        $this->remote = $remote;
-        $this->gitDir = $gitDir;
+        $this->_secret = $secret;
+        $this->_callbacks = new CallbackHandler();
     }
 
+    ////// GETTER /////
+    /**
+     * @return string
+     */
     public function getData()
     {
-        return $this->data;
+        return $this->_data;
     }
 
+    /**
+     * @return string
+     */
     public function getDelivery()
     {
-        return $this->delivery;
+        return $this->_delivery;
     }
 
+    /**
+     * @return string
+     */
     public function getEvent()
     {
-        return $this->event;
+        return $this->_event;
     }
 
-    public function getGitDir()
-    {
-        return $this->gitDir;
-    }
-
-    public function getGitOutput()
-    {
-        return $this->gitOutput;
-    }
-
-    public function getRemote()
-    {
-        return $this->remote;
-    }
-
+    /**
+     * @return string
+     */
     public function getSecret()
     {
-        return $this->secret;
+        return $this->_secret;
     }
 
+    /**
+     * If request is valid, then we launch our callback
+     *
+     * @see #validate()
+     * @return bool
+     */
     public function handle()
     {
         if (!$this->validate()) {
             return false;
         }
 
-        exec("git --work-tree={$this->gitDir} pull -f {$this->remote}", $this->gitOutput);
+        if ($this->_callbacks->hasCallback($this->_event)) {
+            $this->_callbacks->emit($this->_event, $this->_data);
+        }
+        //exec("git --work-tree={$this->gitDir} pull -f {$this->remote}", $this->gitOutput);
         return true;
     }
 
+    /**
+     * Validate the request to github and populate attributes with response
+     *
+     * @return bool
+     */
     public function validate()
     {
         $headers = apache_request_headers();
@@ -72,16 +101,25 @@ class Handler
             return false;
         }
 
-        $this->data = json_decode($payload,true);
-        $this->event = $headers['X-GitHub-Event'];
-        $this->delivery = $headers['X-GitHub-Delivery'];
+        $this->_data = json_decode($payload,true);
+        $this->_event = $headers['X-GitHub-Event'];
+        $this->_delivery = $headers['X-GitHub-Delivery'];
         return true;
     }
 
+    /**
+     * Validate github signature
+     * see https://developer.github.com/webhooks/securing/
+     *
+     * @param $gitHubSignatureHeader
+     * @param $payload
+     *
+     * @return bool
+     */
     protected function validateSignature($gitHubSignatureHeader, $payload)
     {
         list ($algo, $gitHubSignature) = explode("=", $gitHubSignatureHeader);
-        $payloadHash = hash_hmac($algo, $payload, $this->secret);
+        $payloadHash = hash_hmac($algo, $payload, $this->_secret);
         return ($payloadHash == $gitHubSignature);
     }
 }
