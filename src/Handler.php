@@ -102,8 +102,8 @@ class Handler
         }
 
         $this->_data = json_decode($payload,true);
-        $this->_event = $headers['X-GitHub-Event'];
-        $this->_delivery = $headers['X-GitHub-Delivery'];
+        $this->_event = $headers['X-Github-Event'];
+        $this->_delivery = $headers['X-Github-Delivery'];
         return true;
     }
 

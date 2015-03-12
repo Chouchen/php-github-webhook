@@ -56,7 +56,8 @@ class CallbackHandler {
             $realCallbacks = parse_ini_file('webhook.ini');
         }
         foreach ($realCallbacks as $event => $callback) {
-            $this->on($event, new $callback());
+            $clazz = __NAMESPACE__ . '\\' . $callback;
+            $this->on($event, new $clazz);
         }
     }
 
