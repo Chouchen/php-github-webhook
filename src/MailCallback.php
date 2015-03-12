@@ -9,7 +9,7 @@ namespace GitHubWebhook;
  *
  * @package GitHubWebhook
  */
-class PushCallback extends CallbackAbstract
+class MailCallback extends CallbackAbstract
 {
 
     public function run($data)

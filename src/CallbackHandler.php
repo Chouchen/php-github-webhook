@@ -55,9 +55,18 @@ class CallbackHandler {
         } else if (is_readable('webhook.ini')) {
             $realCallbacks = parse_ini_file('webhook.ini');
         }
-        foreach ($realCallbacks as $event => $callback) {
-            $clazz = __NAMESPACE__ . '\\' . $callback;
-            $this->on($event, new $clazz);
+        $this->_parseCallbacks(null, $realCallbacks);
+    }
+
+    protected function _parseCallbacks($mainEvent, array $cb)
+    {
+        foreach ($cb as $event => $callback) {
+            if (is_array($callback)) {
+                $this->_parseCallbacks($event, $callback);
+            } else {
+                $clazz = __NAMESPACE__ . '\\' . $callback;
+                $this->on($mainEvent, new $clazz);
+            }
         }
     }
 
@@ -82,7 +91,9 @@ class CallbackHandler {
     public function emit($event, $data)
     {
         if (isset($this->_callbacks[$event]) && in_array($event, self::$events)) {
-            $this->_callbacks[$event]->run($data);
+            foreach ($this->_callbacks[$event] as $cb) {
+                $cb->run($data);
+            }
         }
     }
 
@@ -95,7 +106,10 @@ class CallbackHandler {
     public function on($event, CallbackAbstract $cb)
     {
         if (in_array($event, self::$events)) {
-            $this->_callbacks[$event] = $cb;
+            if (!isset($this->_callbacks[$event])) {
+                $this->_callbacks[$event] = [];
+            }
+            $this->_callbacks[$event][] = $cb;
         }
     }
 
