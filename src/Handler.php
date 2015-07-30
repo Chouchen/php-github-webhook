@@ -97,13 +97,15 @@ class Handler
         $headers = apache_request_headers();
         $payload = file_get_contents('php://input');
 
-        if (!$this->validateSignature($headers['X-Hub-Signature'], $payload)) {
+        $signature = isset($headers['X-Hub-Signature']) ? $headers['X-Hub-Signature'] : $headers['X-HUB-SIGNATURE'];
+
+        if (!$this->validateSignature($signature, $payload)) {
             return false;
         }
 
-        $this->_data = json_decode($payload,true);
-        $this->_event = $headers['X-Github-Event'];
-        $this->_delivery = $headers['X-Github-Delivery'];
+        $this->_data        = json_decode($payload,true);
+        $this->_event       = isset($headers['X-GitHub-Event']) ? $headers['X-GitHub-Event'] : $headers['X-GITHUB-EVENT'];
+        $this->_delivery    = isset($headers['X-GitHub-Delivery']) ? $headers['X-GitHub-Delivery'] : $headers['X-GITHUB-DELIVERY'];
         return true;
     }
 
